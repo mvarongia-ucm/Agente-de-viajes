@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flujo de Agentes LangGraph - Agente de Viajes IA</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #090d16 0%, #020617 100%);
+      --cyan-neon: #22d3ee;
+      --cyan-glow: rgba(34, 211, 238, 0.4);
+      --emerald-neon: #34d399;
+      --emerald-glow: rgba(52, 211, 153, 0.4);
+      --purple-neon: #c084fc;
+      --purple-glow: rgba(192, 132, 252, 0.4);
+      --amber-neon: #fbbf24;
+      --amber-glow: rgba(251, 191, 36, 0.4);
+      --card-bg: rgba(255, 255, 255, 0.02);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover-border: rgba(255, 255, 255, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #38bdf8, #22d3ee, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+
+    header p {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      font-weight: 300;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .container {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        align-items: start;
+      }
+    }
+
+    /* Diagram Area */
+    .flow-wrapper {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+
+    .flow-wrapper::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .flow-container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3.5rem;
+    }
+
+    /* Connections via SVG background or overlay */
+    .flow-svg-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Nodes styles */
+    .node {
+      width: 450px; /* Ancho fijo para mantener todos del mismo tamaño */
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 1.25rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      position: relative;
+      user-select: none;
+    }
+
+    @media (max-width: 480px) {
+      .node {
+        width: 100%; /* Adaptable en dispositivos móviles */
+      }
+    }
+
+    .node::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 18px;
+      padding: 1px;
+      background: linear-gradient(to bottom right, rgba(255,255,255,0.1), transparent);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .node:hover {
+      transform: translateY(-4px) scale(1.01);
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .node.active {
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 25px var(--glow-color);
+      border-color: var(--neon-color);
+    }
+
+    .node-number {
+      font-size: 1.25rem;
+      font-weight: 800;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: #94a3b8;
+      transition: all 0.3s ease;
+    }
+
+    .node.active .node-number {
+      background: var(--neon-color);
+      border-color: var(--neon-color);
+      color: #020617;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      box-shadow: 0 0 10px var(--neon-color);
+    }
+
+    .node-content {
+      flex: 1;
+    }
+
+    .node-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 0.15rem;
+    }
+
+    .node-agent {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--neon-color);
+    }
+
+    .node-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+    }
+
+    .node.active .node-badge.checkpoint {
+      background: rgba(251, 191, 36, 0.15);
+      border-color: rgba(251, 191, 36, 0.3);
+      color: var(--amber-neon);
+      box-shadow: 0 0 8px rgba(251, 191, 36, 0.1);
+    }
+
+    /* Colors by node type */
+    .node-root { --neon-color: var(--cyan-neon); --glow-color: var(--cyan-glow); }
+    .node-brainstorm { --neon-color: var(--cyan-neon); --glow-color: var(--cyan-glow); }
+    .node-budget { --neon-color: var(--purple-neon); --glow-color: var(--purple-glow); }
+    .node-hotel { --neon-color: var(--emerald-neon); --glow-color: var(--emerald-glow); }
+    .node-activities { --neon-color: var(--cyan-neon); --glow-color: var(--cyan-glow); }
+    .node-cronograma { --neon-color: var(--cyan-neon); --glow-color: var(--cyan-glow); }
+    .node-summary { --neon-color: var(--emerald-neon); --glow-color: var(--emerald-glow); }
+
+    /* Connector line */
+    .arrow {
+      height: 3.5rem;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--from-color), var(--to-color));
+      position: absolute;
+      opacity: 0.4;
+      transition: all 0.3s ease;
+    }
+    
+    .node.active + .arrow {
+      opacity: 1;
+      box-shadow: 0 0 10px var(--from-color);
+      width: 3px;
+    }
+
+    /* Side details card */
+    .detail-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2.25rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      position: sticky;
+      top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-height: 500px;
+      transition: all 0.3s ease;
+    }
+
+    .detail-header {
+      border-b: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 1.25rem;
+    }
+
+    .detail-header h3 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+    }
+
+    .detail-header .sub {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-color, var(--cyan-neon));
+    }
+
+    .detail-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .detail-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+    }
+
+    .detail-value {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #cbd5e1;
+    }
+
+    .data-box {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .checkpoint-alert {
+      background: rgba(251, 191, 36, 0.05);
+      border: 1px solid rgba(251, 191, 36, 0.15);
+      border-radius: 14px;
+      padding: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      margin-top: 0.5rem;
+    }
+
+    .checkpoint-icon {
+      color: var(--amber-neon);
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .checkpoint-text h4 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--amber-neon);
+      margin-bottom: 0.15rem;
+    }
+
+    .checkpoint-text p {
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: #cbd5e1;
+    }
+
+    .interactive-hint {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Flujo de Agentes Vacacionales</h1>
+    <p>Visualización interactiva paso a paso de la arquitectura LangGraph Multiagente</p>
+  </header>
+
+  <div class="container">
+    
+    <!-- Flowchart -->
+    <div class="flow-wrapper">
+      <div class="flow-container">
+        
+        <!-- Step 1 -->
+        <div class="node node-root active" onclick="showStep(1)" style="--neon-color: var(--cyan-neon); --glow-color: var(--cyan-glow);">
+          <div class="node-number">1</div>
+          <div class="node-content">
+            <div class="node-title">Recopilación de Perfil</div>
+            <div class="node-agent">Root Agent</div>
+          </div>
+          <div class="node-badge">Conversación</div>
+        </div>
+        
+        <div class="arrow" style="top: 5.75rem; --from-color: var(--cyan-neon); --to-color: var(--cyan-neon);"></div>
+
+        <!-- Step 2 -->
+        <div class="node node-brainstorm" onclick="showStep(2)">
+          <div class="node-number">2</div>
+          <div class="node-content">
+            <div class="node-title">Lluvia de Destinos</div>
+            <div class="node-agent">Brainstorm Agent</div>
+          </div>
+          <div class="node-badge checkpoint">Checkpoint 1</div>
+        </div>
+
+        <div class="arrow" style="top: 13.9rem; --from-color: var(--cyan-neon); --to-color: var(--purple-neon);"></div>
+
+        <!-- Step 3 -->
+        <div class="node node-budget" onclick="showStep(3)">
+          <div class="node-number">3</div>
+          <div class="node-content">
+            <div class="node-title">Estimación de Presupuesto</div>
+            <div class="node-agent">Presupuesto Agent</div>
+          </div>
+          <div class="node-badge checkpoint">Checkpoint 4</div>
+        </div>
+
+        <div class="arrow" style="top: 22.05rem; --from-color: var(--purple-neon); --to-color: var(--emerald-neon);"></div>
+
+        <!-- Step 4 -->
+        <div class="node node-hotel" onclick="showStep(4)">
+          <div class="node-number">4</div>
+          <div class="node-content">
+            <div class="node-title">Selección de Alojamiento</div>
+            <div class="node-agent">Hotel Agent</div>
+          </div>
+          <div class="node-badge checkpoint">Checkpoint Hotel</div>
+        </div>
+
+        <div class="arrow" style="top: 30.2rem; --from-color: var(--emerald-neon); --to-color: var(--cyan-neon);"></div>
+
+        <!-- Step 5 -->
+        <div class="node node-activities" onclick="showStep(5)">
+          <div class="node-number">5</div>
+          <div class="node-content">
+            <div class="node-title">Búsqueda de Actividades</div>
+            <div class="node-agent">Activities Agent</div>
+          </div>
+          <div class="node-badge checkpoint">Checkpoint 2</div>
+        </div>
+
+        <div class="arrow" style="top: 38.35rem; --from-color: var(--cyan-neon); --to-color: var(--cyan-neon);"></div>
+
+        <!-- Step 6 -->
+        <div class="node node-cronograma" onclick="showStep(6)">
+          <div class="node-number">6</div>
+          <div class="node-content">
+            <div class="node-title">Armado de Itinerario</div>
+            <div class="node-agent">Cronograma Agent</div>
+          </div>
+          <div class="node-badge checkpoint">Checkpoint 3</div>
+        </div>
+
+        <div class="arrow" style="top: 46.5rem; --from-color: var(--cyan-neon); --to-color: var(--emerald-neon);"></div>
+
+        <!-- Step 7 -->
+        <div class="node node-summary" onclick="showStep(7)">
+          <div class="node-number">7</div>
+          <div class="node-content">
+            <div class="node-title">Presupuesto Final y Resumen</div>
+            <div class="node-agent">Summary & Presupuesto Agent</div>
+          </div>
+          <div class="node-badge">Consolidación</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Detail Panel -->
+    <div class="detail-card" id="detail-card">
+      <div class="detail-header">
+        <span class="sub" id="detail-agent">Root Agent</span>
+        <h3 id="detail-title">Recopilación de Perfil</h3>
+      </div>
+      
+      <div class="detail-section">
+        <span class="detail-label">Descripción del Paso</span>
+        <div class="detail-value" id="detail-desc">
+          El Root Agent inicia el flujo conversacional. Su tarea es hacer preguntas lógicas y secuenciales en lenguaje natural al usuario para recopilar y estructurar los parámetros básicos del viaje. Si el usuario pide "ayuda a explorar", activa el modo exploración y consulta si el viaje es nacional o internacional.
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <span class="detail-label">Datos que recolecta / Variables</span>
+        <div class="data-box" id="detail-data">
+          traveler_profile: {<br>
+          &nbsp;&nbsp;planned_destination: string | null,<br>
+          &nbsp;&nbsp;destination_scope: "nacional" | "internacional",<br>
+          &nbsp;&nbsp;transport_mode: "avión" | "auto",<br>
+          &nbsp;&nbsp;origin_country_name: string,<br>
+          &nbsp;&nbsp;duration_days: number,<br>
+          &nbsp;&nbsp;num_people: number,<br>
+          &nbsp;&nbsp;ages: string[],<br>
+          &nbsp;&nbsp;travel_dates: string,<br>
+          &nbsp;&nbsp;travel_style: string<br>
+          }
+        </div>
+      </div>
+
+      <div class="detail-section" id="detail-checkpoint-wrapper" style="display: none;">
+        <span class="detail-label">Interacción Humana</span>
+        <div class="checkpoint-alert">
+          <div class="checkpoint-icon">⚠️</div>
+          <div class="checkpoint-text">
+            <h4 id="detail-checkpoint-title">Checkpoint Humano</h4>
+            <p id="detail-checkpoint-desc">El usuario debe aprobar esta lista en la interfaz para continuar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="interactive-hint">
+    * Haz clic en cualquiera de las cajas del flujo para ver su funcionamiento detallado paso a paso.
+  </div>
+
+  <script>
+    const stepsData = {
+      1: {
+        title: "Recopilación de Perfil",
+        agent: "Root Agent",
+        desc: "El agente raíz se encarga del perfilamiento del viajero en lenguaje natural. Clasifica de forma inteligente las respuestas (extrayendo números de personas, rangos de edades y fechas). La secuencia de preguntas es fija: Destino/Exploración → Alcance del viaje (Nacional/Internacional) → Medio de transporte (Avión/Auto) → País de procedencia → Duración, Viajeros, Edades, Fechas y Estilo.",
+        data: "state.traveler_profile = {\n  planned_destination: 'explore' o ciudad,\n  destination_scope: 'nacional' | 'internacional',\n  transport_mode: 'avión' | 'auto',\n  origin_country_name: 'Colombia',\n  duration_days: 5,\n  num_people: 4,\n  ages: ['34 años', '32 años', '4 años'],\n  travel_dates: 'Julio 2026',\n  travel_style: 'Aventura ligera'\n}",
+        checkpoint: null,
+        accent: "#22d3ee"
+      },
+      2: {
+        title: "Lluvia de Destinos",
+        agent: "Brainstorm Agent",
+        desc: "Busca sugerir 3 destinos en temporada baja basándose en el alcance (nacional o internacional) y país de origen. Si el usuario ingresó un destino específico, este es validado a fondo, y se le presentan 2 opciones alternativas de similares características. Se aplica un control estricto para que un destino internacional sea obligatoriamente un país distinto al de origen.",
+        data: "state.destinations = [\n  { name: 'Lisboa', country: 'Portugal', reason_low_season: '...', climate_risk: '...', main_advantage: '...' },\n  { name: 'Oporto', country: 'Portugal', ... },\n  { name: 'Madrid', country: 'España', ... }\n]",
+        checkpoint: {
+          title: "Selección de Destino (human_checkpoint_1)",
+          desc: "El usuario visualiza las 3 tarjetas de destino sugeridas y debe seleccionar una (o escribir en el chat que desea ver otras opciones diferentes, gatillando una regeneración de destinos)."
+        },
+        accent: "#22d3ee"
+      },
+      3: {
+        title: "Estimación de Presupuesto",
+        agent: "Presupuesto Agent (Estimador)",
+        desc: "Ejecuta búsquedas en internet (Serper API) para cotizar el precio aproximado de boletos de avión y tarifas base de hoteles. Con estos datos, calcula y formula de forma automatizada 3 planes de presupuesto estimados (Economy, Standard, Premium) integrando pasajes, hospedaje base, comidas diarias y costo estimado de actividades diarias.",
+        data: "state.budget = {\n  tiers: {\n    economy: { flights: 1200, accommodation: 350, activities: 300, food: 500, total_group: 2350 },\n    standard: { flights: 1560, accommodation: 525, activities: 800, food: 1000, total_group: 3885 },\n    premium: { flights: 2160, accommodation: 875, activities: 1800, food: 1800, total_group: 6635 }\n  }\n}",
+        checkpoint: {
+          title: "Selección de Nivel de Presupuesto (human_checkpoint_4)",
+          desc: "El usuario elige en la interfaz con cuál plan de presupuesto (Economy, Standard o Premium) quiere continuar el viaje."
+        },
+        accent: "#c084fc"
+      },
+      4: {
+        title: "Sugerencia de Alojamiento",
+        agent: "Hotel Agent",
+        desc: "Consulta la web por hospedajes en la ciudad destino que correspondan con la gama de presupuesto elegida. Utiliza el LLM para estructurar exactamente 6 opciones de hotel reales que cuenten con excelente conectividad con metro o tren. El agente calcula matemáticamente la cantidad de habitaciones necesarias para el grupo y multiplica la tarifa unitaria por noche, mostrando al usuario el precio total grupal por noche.",
+        data: "state.hotel_options = [\n  {\n    name: 'Hotel Baixa Chiado',\n    type: 'Hotel 4 estrellas',\n    price_per_night_usd: 130.0,\n    total_price_per_night_usd: 260.0, // Para 2 habitaciones\n    connectivity_info: 'A 2 minutos de la estación de metro Baixa-Chiado'\n  },\n  ...\n]",
+        checkpoint: {
+          title: "Selección de Hotel (human_checkpoint_hotel)",
+          desc: "El usuario selecciona uno de los 6 hoteles presentados. Este hotel servirá como el punto de inicio ('casa base') para todo el cronograma diario."
+        },
+        accent: "#34d399"
+      },
+      5: {
+        title: "Búsqueda de Actividades",
+        agent: "Activities Agent",
+        desc: "Consulta la web sobre puntos turísticos populares en el destino. Diseña una cartera de entre 8 y 10 actividades adaptadas al estilo de viaje, edades del grupo (con reglas estrictas si hay bebés, niños pequeños o adultos mayores) y presupuesto. Si el usuario viaja sin auto (llegó en avión), el agente filtra y evita recomendar cualquier actividad interurbana o alejada a más de 1 hora.",
+        data: "state.activities = [\n  { name: 'Visita al Monasterio de los Jerónimos', category: 'cultural', duration_hours: 2, estimated_cost_usd: 12.0, suitable_for: 'todas las edades' },\n  { name: 'Tour en Tranvía 28', category: 'cultural', duration_hours: 1.5, ... }\n]",
+        checkpoint: {
+          title: "Aprobación de Actividades (human_checkpoint_2)",
+          desc: "El usuario revisa la lista de actividades recomendadas por persona y las aprueba, o solicita realizar cambios para que el agente busque unas nuevas."
+        },
+        accent: "#22d3ee"
+      },
+      6: {
+        title: "Armado de Itinerario",
+        agent: "Cronograma Agent",
+        desc: "Crea la distribución día a día de las actividades (mañana, tarde y noche) ordenándolas lógicamente por proximidad geográfica. En el backend se implementa un filtro de limpieza que remueve descripciones de los campos 'place' de cada bloque. En el frontend, se alimenta la dirección del hotel seleccionado al inicio de los puntos diarios, permitiendo a Google Maps trazar rutas reales partiendo desde el hotel.",
+        data: "state.cronograma = [\n  {\n    day: 1, date: 'Día 1',\n    morning: { start_time: '09:00', place: 'Monasterio de los Jerónimos', description: '...' },\n    afternoon: { start_time: '13:30', place: 'Pastéis de Belém', ... },\n    evening: { start_time: '20:00', place: 'Tasca do Chico', ... },\n    notes: 'Consejo: usar calzado cómodo para las cuestas.'\n  }\n]",
+        checkpoint: {
+          title: "Aprobación de Itinerario (human_checkpoint_3)",
+          desc: "El usuario visualiza su agenda diaria interactiva con su mapa de rutas de Google Maps trazado para cada día. Aprueba o solicita rediseñar."
+        },
+        accent: "#22d3ee"
+      },
+      7: {
+        title: "Presupuesto Final y Resumen",
+        agent: "Summary & Presupuesto Agent",
+        desc: "Recibe el itinerario y las actividades definitivas. El Presupuesto Agent realiza la consolidación final sumando los vuelos del tier correspondiente, el costo exacto del hotel seleccionado multiplicado por las noches reales, y la suma neta de las actividades aprobadas. Luego, el Summary Agent compila el itinerario final de texto plano con la ficha del hotel, costos reales detallados y checklist de preparación. Guarda la sesión y habilita las descargas PDF.",
+        data: "state.budget.final = {\n  flights: 1560.0,\n  accommodation: 1300.0, // Hotel real seleccionado * noches\n  activities: 184.0,     // Costo real de actividades aprobadas\n  food: 1000.0,\n  total_per_person: 1011.0,\n  total_group: 4044.0,\n  is_estimated: false\n}\nstate.summary = '=== PLAN DE VACACIONES COMPLETO === ...'",
+        checkpoint: null,
+        accent: "#34d399"
+      }
+    };
+
+    function showStep(stepNum) {
+      // Deactivate all nodes
+      document.querySelectorAll('.node').forEach(node => {
+        node.classList.remove('active');
+      });
+      
+      // Activate clicked node
+      const clickedNode = document.querySelectorAll('.node')[stepNum - 1];
+      clickedNode.classList.add('active');
+      
+      const step = stepsData[stepNum];
+      
+      // Update Detail Card
+      const card = document.getElementById('detail-card');
+      card.style.setProperty('--accent-color', step.accent);
+      
+      document.getElementById('detail-agent').textContent = step.agent;
+      document.getElementById('detail-agent').style.color = step.accent;
+      document.getElementById('detail-title').textContent = step.title;
+      document.getElementById('detail-desc').textContent = step.desc;
+      document.getElementById('detail-data').innerHTML = step.data.replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
+      
+      const cpWrapper = document.getElementById('detail-checkpoint-wrapper');
+      if (step.checkpoint) {
+        cpWrapper.style.display = 'block';
+        document.getElementById('detail-checkpoint-title').textContent = step.checkpoint.title;
+        document.getElementById('detail-checkpoint-desc').textContent = step.checkpoint.desc;
+      } else {
+        cpWrapper.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
