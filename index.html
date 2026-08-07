@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flujo de Agentes LangGraph - Agente de Viajes IA</title>
+  <title>Arquitectura y Flujo de Agentes IA - Agente de Viajes Multiagente</title>
   <!-- Google Fonts: Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,6 @@
       --amber-glow: rgba(251, 191, 36, 0.4);
       --card-bg: rgba(255, 255, 255, 0.02);
       --card-border: rgba(255, 255, 255, 0.08);
-      --card-hover-border: rgba(255, 255, 255, 0.2);
     }
 
     * {
@@ -60,6 +59,27 @@
       color: #94a3b8;
       font-size: 1.1rem;
       font-weight: 300;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .meta-pills {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .meta-pill {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      color: var(--cyan-neon);
     }
 
     .container {
@@ -110,20 +130,10 @@
       gap: 3.5rem;
     }
 
-    /* Connections via SVG background or overlay */
-    .flow-svg-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 0;
-    }
-
     /* Nodes styles */
     .node {
-      width: 450px; /* Ancho fijo para mantener todos del mismo tamaño */
+      width: 100%;
+      max-width: 480px;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 18px;
@@ -135,25 +145,6 @@
       gap: 1.25rem;
       position: relative;
       user-select: none;
-    }
-
-    @media (max-width: 480px) {
-      .node {
-        width: 100%; /* Adaptable en dispositivos móviles */
-      }
-    }
-
-    .node::after {
-      content: '';
-      position: absolute;
-      inset: -1px;
-      border-radius: 18px;
-      padding: 1px;
-      background: linear-gradient(to bottom right, rgba(255,255,255,0.1), transparent);
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
     }
 
     .node:hover {
@@ -172,8 +163,8 @@
     .node-number {
       font-size: 1.25rem;
       font-weight: 800;
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       border-radius: 12px;
       display: flex;
       align-items: center;
@@ -182,6 +173,7 @@
       border: 1px solid var(--card-border);
       color: #94a3b8;
       transition: all 0.3s ease;
+      shrink: 0;
     }
 
     .node.active .node-number {
@@ -211,6 +203,13 @@
       color: var(--neon-color);
     }
 
+    .node-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      align-items: flex-end;
+    }
+
     .node-badge {
       font-size: 0.65rem;
       font-weight: 700;
@@ -219,6 +218,13 @@
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.08);
       color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    .node-badge.feature {
+      background: rgba(34, 211, 238, 0.1);
+      border-color: rgba(34, 211, 238, 0.3);
+      color: var(--cyan-neon);
     }
 
     .node.active .node-badge.checkpoint {
@@ -266,7 +272,7 @@
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
-      min-height: 500px;
+      min-height: 550px;
       transition: all 0.3s ease;
     }
 
@@ -311,21 +317,22 @@
     }
 
     .data-box {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
-      padding: 0.75rem 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1rem;
       font-family: monospace;
       font-size: 0.8rem;
       color: #94a3b8;
       overflow-x: auto;
       white-space: pre-wrap;
       word-break: break-word;
+      line-height: 1.5;
     }
 
     .checkpoint-alert {
       background: rgba(251, 191, 36, 0.05);
-      border: 1px solid rgba(251, 191, 36, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.2);
       border-radius: 14px;
       padding: 1rem;
       display: flex;
@@ -357,15 +364,22 @@
       text-align: center;
       color: #64748b;
       font-size: 0.85rem;
-      margin-top: 1rem;
+      margin-top: 2rem;
     }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>Flujo de Agentes Vacacionales</h1>
-    <p>Visualización interactiva paso a paso de la arquitectura LangGraph Multiagente</p>
+    <h1>Flujo de Agentes Vacacionales (LangGraph)</h1>
+    <p>Arquitectura Multiagente Orquestada con Memoria de Usuario, Reglas Deterministas y Frontend Interactivo</p>
+    <div class="meta-pills">
+      <span class="meta-pill">🚀 Atajo de Perfil Inteligente</span>
+      <span class="meta-pill">🚗 Filtro Terrestre de Islas</span>
+      <span class="meta-pill">📅 Calendario Drag & Drop</span>
+      <span class="meta-pill">🗺️ Rutas Google Maps +to:</span>
+      <span class="meta-pill">🔒 Auth SHA-256 & GSI</span>
+    </div>
   </header>
 
   <div class="container">
@@ -378,10 +392,13 @@
         <div class="node node-root active" onclick="showStep(1)" style="--neon-color: var(--cyan-neon); --glow-color: var(--cyan-glow);">
           <div class="node-number">1</div>
           <div class="node-content">
-            <div class="node-title">Recopilación de Perfil</div>
-            <div class="node-agent">Root Agent</div>
+            <div class="node-title">Autenticación & Perfil</div>
+            <div class="node-agent">Root Agent + Memory</div>
           </div>
-          <div class="node-badge">Conversación</div>
+          <div class="node-badges">
+            <div class="node-badge feature">🚀 Atajo 1-Clic</div>
+            <div class="node-badge">Memoria Persistent</div>
+          </div>
         </div>
         
         <div class="arrow" style="top: 5.75rem; --from-color: var(--cyan-neon); --to-color: var(--cyan-neon);"></div>
@@ -393,7 +410,10 @@
             <div class="node-title">Lluvia de Destinos</div>
             <div class="node-agent">Brainstorm Agent</div>
           </div>
-          <div class="node-badge checkpoint">Checkpoint 1</div>
+          <div class="node-badges">
+            <div class="node-badge feature">🚗 Filtro de Islas</div>
+            <div class="node-badge checkpoint">Checkpoint 1</div>
+          </div>
         </div>
 
         <div class="arrow" style="top: 13.9rem; --from-color: var(--cyan-neon); --to-color: var(--purple-neon);"></div>
@@ -405,7 +425,10 @@
             <div class="node-title">Estimación de Presupuesto</div>
             <div class="node-agent">Presupuesto Agent</div>
           </div>
-          <div class="node-badge checkpoint">Checkpoint 4</div>
+          <div class="node-badges">
+            <div class="node-badge feature">🌐 Serper Search</div>
+            <div class="node-badge checkpoint">Checkpoint 4</div>
+          </div>
         </div>
 
         <div class="arrow" style="top: 22.05rem; --from-color: var(--purple-neon); --to-color: var(--emerald-neon);"></div>
@@ -414,10 +437,13 @@
         <div class="node node-hotel" onclick="showStep(4)">
           <div class="node-number">4</div>
           <div class="node-content">
-            <div class="node-title">Selección de Alojamiento</div>
+            <div class="node-title">Sugerencia de Alojamiento</div>
             <div class="node-agent">Hotel Agent</div>
           </div>
-          <div class="node-badge checkpoint">Checkpoint Hotel</div>
+          <div class="node-badges">
+            <div class="node-badge feature">🏨 Hoteles Reales</div>
+            <div class="node-badge checkpoint">Checkpoint Hotel</div>
+          </div>
         </div>
 
         <div class="arrow" style="top: 30.2rem; --from-color: var(--emerald-neon); --to-color: var(--cyan-neon);"></div>
@@ -429,7 +455,10 @@
             <div class="node-title">Búsqueda de Actividades</div>
             <div class="node-agent">Activities Agent</div>
           </div>
-          <div class="node-badge checkpoint">Checkpoint 2</div>
+          <div class="node-badges">
+            <div class="node-badge feature">👶 Ritmo Familiar</div>
+            <div class="node-badge checkpoint">Checkpoint 2</div>
+          </div>
         </div>
 
         <div class="arrow" style="top: 38.35rem; --from-color: var(--cyan-neon); --to-color: var(--cyan-neon);"></div>
@@ -438,10 +467,13 @@
         <div class="node node-cronograma" onclick="showStep(6)">
           <div class="node-number">6</div>
           <div class="node-content">
-            <div class="node-title">Armado de Itinerario</div>
-            <div class="node-agent">Cronograma Agent</div>
+            <div class="node-title">Agenda & Calendario</div>
+            <div class="node-agent">Cronograma Agent + Sync</div>
           </div>
-          <div class="node-badge checkpoint">Checkpoint 3</div>
+          <div class="node-badges">
+            <div class="node-badge feature">📅 Drag & Drop ⇄</div>
+            <div class="node-badge checkpoint">Checkpoint 3</div>
+          </div>
         </div>
 
         <div class="arrow" style="top: 46.5rem; --from-color: var(--cyan-neon); --to-color: var(--emerald-neon);"></div>
@@ -450,10 +482,13 @@
         <div class="node node-summary" onclick="showStep(7)">
           <div class="node-number">7</div>
           <div class="node-content">
-            <div class="node-title">Presupuesto Final y Resumen</div>
-            <div class="node-agent">Summary & Presupuesto Agent</div>
+            <div class="node-title">Consolidación & PDF</div>
+            <div class="node-agent">Summary Agent</div>
           </div>
-          <div class="node-badge">Consolidación</div>
+          <div class="node-badges">
+            <div class="node-badge feature">✉️ Envió Email</div>
+            <div class="node-badge">PDF Download</div>
+          </div>
         </div>
 
       </div>
@@ -462,36 +497,38 @@
     <!-- Detail Panel -->
     <div class="detail-card" id="detail-card">
       <div class="detail-header">
-        <span class="sub" id="detail-agent">Root Agent</span>
-        <h3 id="detail-title">Recopilación de Perfil</h3>
+        <span class="sub" id="detail-agent">Root Agent + Memory Manager</span>
+        <h3 id="detail-title">Autenticación & Perfil Inteligente</h3>
       </div>
       
       <div class="detail-section">
-        <span class="detail-label">Descripción del Paso</span>
+        <span class="detail-label">Descripción Técnica</span>
         <div class="detail-value" id="detail-desc">
-          El Root Agent inicia el flujo conversacional. Su tarea es hacer preguntas lógicas y secuenciales en lenguaje natural al usuario para recopilar y estructurar los parámetros básicos del viaje. Si el usuario pide "ayuda a explorar", activa el modo exploración y consulta si el viaje es nacional o internacional.
+          El Root Agent gestiona la autenticación del usuario (mediante registro seguro con contraseña encriptada SHA-256 o Google Identity Services). Si el usuario ya cuenta con viajes anteriores en `user_profiles.json`, detecta sus preferencias e interviene con el **Atajo de Perfil Inteligente de 1-clic (`quick_profile_shortcut`)**, precargando automáticamente Origen, Transporte, Alcance y Estilo de viaje, ahorrando hasta 4 preguntas repetitivas con una confirmación transparente.
         </div>
       </div>
 
       <div class="detail-section">
-        <span class="detail-label">Datos que recolecta / Variables</span>
+        <span class="detail-label">Estructura del Estado (`VacationState`)</span>
         <div class="data-box" id="detail-data">
-          traveler_profile: {<br>
-          &nbsp;&nbsp;planned_destination: string | null,<br>
-          &nbsp;&nbsp;destination_scope: "nacional" | "internacional",<br>
-          &nbsp;&nbsp;transport_mode: "avión" | "auto",<br>
-          &nbsp;&nbsp;origin_country_name: string,<br>
-          &nbsp;&nbsp;duration_days: number,<br>
-          &nbsp;&nbsp;num_people: number,<br>
-          &nbsp;&nbsp;ages: string[],<br>
-          &nbsp;&nbsp;travel_dates: string,<br>
-          &nbsp;&nbsp;travel_style: string<br>
-          }
+state.traveler_profile = {
+  planned_destination: 'explore' | 'París',
+  destination_scope: 'internacional',
+  transport_mode: 'avión',
+  origin_country_name: 'Chile',
+  origin_country: 'Santiago, Chile',
+  duration_days: 5,
+  num_people: 4,
+  ages: ['2 adultos', '1 niño 8 años'],
+  travel_dates: 'Julio 2026',
+  travel_style: 'relax'
+}
+state.profile_shortcut_status = 'accepted' | 'declined'
         </div>
       </div>
 
       <div class="detail-section" id="detail-checkpoint-wrapper" style="display: none;">
-        <span class="detail-label">Interacción Humana</span>
+        <span class="detail-label">Interacción Humana (Human-in-the-Loop)</span>
         <div class="checkpoint-alert">
           <div class="checkpoint-icon">⚠️</div>
           <div class="checkpoint-text">
@@ -505,34 +542,34 @@
   </div>
 
   <div class="interactive-hint">
-    * Haz clic en cualquiera de las cajas del flujo para ver su funcionamiento detallado paso a paso.
+    * Haz clic en cualquiera de las cajas del flujo para inspeccionar en detalle el funcionamiento técnico y el estado de cada agente.
   </div>
 
   <script>
     const stepsData = {
       1: {
-        title: "Recopilación de Perfil",
-        agent: "Root Agent",
-        desc: "El agente raíz se encarga del perfilamiento del viajero en lenguaje natural. Clasifica de forma inteligente las respuestas (extrayendo números de personas, rangos de edades y fechas). La secuencia de preguntas es fija: Destino/Exploración → Alcance del viaje (Nacional/Internacional) → Medio de transporte (Avión/Auto) → País de procedencia → Duración, Viajeros, Edades, Fechas y Estilo.",
-        data: "state.traveler_profile = {\n  planned_destination: 'explore' o ciudad,\n  destination_scope: 'nacional' | 'internacional',\n  transport_mode: 'avión' | 'auto',\n  origin_country_name: 'Colombia',\n  duration_days: 5,\n  num_people: 4,\n  ages: ['34 años', '32 años', '4 años'],\n  travel_dates: 'Julio 2026',\n  travel_style: 'Aventura ligera'\n}",
+        title: "Autenticación & Perfil Inteligente",
+        agent: "Root Agent + Memory Manager",
+        desc: "Gestiona la autenticación segura (registro con SHA-256 y Google GSI). Si el usuario es recurrente, lee `user_profiles.json` y activa el 'Atajo de Perfil Inteligente' (1-clic) que precarga Origen, Transporte, Alcance y Estilo de viaje, ahorrando 4 preguntas consecutivas. Si el usuario decide configurar desde cero, realiza las preguntas en secuencia lógica.",
+        data: "state.traveler_profile = {\n  planned_destination: 'explore' | 'París',\n  destination_scope: 'internacional',\n  transport_mode: 'avión',\n  origin_country_name: 'Chile',\n  origin_country: 'Santiago, Chile',\n  duration_days: 5,\n  num_people: 4,\n  ages: ['2 adultos 30s', '1 niño 8 años'],\n  travel_dates: 'Julio 2026',\n  travel_style: 'relax'\n}\nstate.profile_shortcut_status = 'accepted'",
         checkpoint: null,
         accent: "#22d3ee"
       },
       2: {
-        title: "Lluvia de Destinos",
-        agent: "Brainstorm Agent",
-        desc: "Busca sugerir 3 destinos en temporada baja basándose en el alcance (nacional o internacional) y país de origen. Si el usuario ingresó un destino específico, este es validado a fondo, y se le presentan 2 opciones alternativas de similares características. Se aplica un control estricto para que un destino internacional sea obligatoriamente un país distinto al de origen.",
-        data: "state.destinations = [\n  { name: 'Lisboa', country: 'Portugal', reason_low_season: '...', climate_risk: '...', main_advantage: '...' },\n  { name: 'Oporto', country: 'Portugal', ... },\n  { name: 'Madrid', country: 'España', ... }\n]",
+        title: "Lluvia de Destinos y Filtro Terrestre",
+        agent: "Brainstorm Agent & Land Transport Filter",
+        desc: "Sugiere 3 destinos en temporada baja utilizando el dataset determinista `seasons_lookup.py`. Si el medio de transporte es 'auto', ejecuta un algoritmo de filtrado en Python que bloquea automáticamente todas las islas del mundo (San Andrés, Galápagos, Baleares, Caribe, Hawái) y barreras continentales como el Darién, garantizando únicamente rutas conectadas por carretera continental.",
+        data: "state.destinations = [\n  { name: 'Mendoza', country: 'Argentina', reason_low_season: '...', climate_risk: '...', main_advantage: '...' },\n  { name: 'Bariloche', country: 'Argentina', ... },\n  { name: 'Córdoba', country: 'Argentina', ... }\n]",
         checkpoint: {
           title: "Selección de Destino (human_checkpoint_1)",
-          desc: "El usuario visualiza las 3 tarjetas de destino sugeridas y debe seleccionar una (o escribir en el chat que desea ver otras opciones diferentes, gatillando una regeneración de destinos)."
+          desc: "El usuario visualiza las 3 tarjetas de destino sugeridas y debe seleccionar una (o escribir en el chat que desea ver otras opciones diferentes para regenerar los destinos)."
         },
         accent: "#22d3ee"
       },
       3: {
-        title: "Estimación de Presupuesto",
-        agent: "Presupuesto Agent (Estimador)",
-        desc: "Ejecuta búsquedas en internet (Serper API) para cotizar el precio aproximado de boletos de avión y tarifas base de hoteles. Con estos datos, calcula y formula de forma automatizada 3 planes de presupuesto estimados (Economy, Standard, Premium) integrando pasajes, hospedaje base, comidas diarias y costo estimado de actividades diarias.",
+        title: "Estimación de Presupuesto Real",
+        agent: "Presupuesto Agent (Serper API)",
+        desc: "Ejecuta búsquedas web en tiempo real con Serper API para cotizar pasajes aéreos o combustible y hospedaje base. Calcula y formula 3 planes de presupuesto estimados (Economy, Standard, Premium) integrando pasajes, hospedaje, comidas diarias y estimación de actividades por persona y grupo.",
         data: "state.budget = {\n  tiers: {\n    economy: { flights: 1200, accommodation: 350, activities: 300, food: 500, total_group: 2350 },\n    standard: { flights: 1560, accommodation: 525, activities: 800, food: 1000, total_group: 3885 },\n    premium: { flights: 2160, accommodation: 875, activities: 1800, food: 1800, total_group: 6635 }\n  }\n}",
         checkpoint: {
           title: "Selección de Nivel de Presupuesto (human_checkpoint_4)",
@@ -541,43 +578,43 @@
         accent: "#c084fc"
       },
       4: {
-        title: "Sugerencia de Alojamiento",
+        title: "Sugerencia de Alojamiento y Casa Base",
         agent: "Hotel Agent",
-        desc: "Consulta la web por hospedajes en la ciudad destino que correspondan con la gama de presupuesto elegida. Utiliza el LLM para estructurar exactamente 6 opciones de hotel reales que cuenten con excelente conectividad con metro o tren. El agente calcula matemáticamente la cantidad de habitaciones necesarias para el grupo y multiplica la tarifa unitaria por noche, mostrando al usuario el precio total grupal por noche.",
-        data: "state.hotel_options = [\n  {\n    name: 'Hotel Baixa Chiado',\n    type: 'Hotel 4 estrellas',\n    price_per_night_usd: 130.0,\n    total_price_per_night_usd: 260.0, // Para 2 habitaciones\n    connectivity_info: 'A 2 minutos de la estación de metro Baixa-Chiado'\n  },\n  ...\n]",
+        desc: "Busca hospedajes reales en la ciudad de destino concordantes con la gama de presupuesto elegida y con excelente conectividad a transporte público. Calcula el número exacto de habitaciones necesarias para el grupo y multiplica la tarifa unitaria por las noches reales. El hotel seleccionado servirá como el punto de inicio y retorno ('casa base') para los circuitos diarios.",
+        data: "state.hotel_options = [\n  {\n    name: 'Hotel NH Mendoza Cordillera',\n    type: 'Hotel 4 estrellas',\n    price_per_night_usd: 110.0,\n    total_price_per_night_usd: 220.0, // Para 2 habitaciones\n    connectivity_info: 'Ubicación céntrica cerca de líneas principales de tranvía'\n  },\n  ...\n]",
         checkpoint: {
           title: "Selección de Hotel (human_checkpoint_hotel)",
-          desc: "El usuario selecciona uno de los 6 hoteles presentados. Este hotel servirá como el punto de inicio ('casa base') para todo el cronograma diario."
+          desc: "El usuario selecciona uno de los hospedajes reales presentados. Este servirá como el inicio y fin de cada circuito en el mapa de Google Maps."
         },
         accent: "#34d399"
       },
       5: {
-        title: "Búsqueda de Actividades",
+        title: "Búsqueda de Actividades Adaptadas",
         agent: "Activities Agent",
-        desc: "Consulta la web sobre puntos turísticos populares en el destino. Diseña una cartera de entre 8 y 10 actividades adaptadas al estilo de viaje, edades del grupo (con reglas estrictas si hay bebés, niños pequeños o adultos mayores) y presupuesto. Si el usuario viaja sin auto (llegó en avión), el agente filtra y evita recomendar cualquier actividad interurbana o alejada a más de 1 hora.",
-        data: "state.activities = [\n  { name: 'Visita al Monasterio de los Jerónimos', category: 'cultural', duration_hours: 2, estimated_cost_usd: 12.0, suitable_for: 'todas las edades' },\n  { name: 'Tour en Tranvía 28', category: 'cultural', duration_hours: 1.5, ... }\n]",
+        desc: "Consulta la web por atracciones turísticas destacadas en el destino. Diseña una cartera de 8 a 10 actividades adaptadas al estilo de viaje y edades del grupo (con ritmo moderado y descansos si viajan niños pequeños o bebés). Si se viaja en avión sin vehículo propio, filtra y descarta actividades alejadas a más de 1 hora.",
+        data: "state.activities = [\n  { name: 'Tour por Viñedos del Valle de Uco', category: 'gastronómico', duration_hours: 4, estimated_cost_usd: 45.0, suitable_for: 'todas las edades' },\n  { name: 'Paseo por el Parque General San Martín', category: 'relax', duration_hours: 2, estimated_cost_usd: 0.0, ... }\n]",
         checkpoint: {
           title: "Aprobación de Actividades (human_checkpoint_2)",
-          desc: "El usuario revisa la lista de actividades recomendadas por persona y las aprueba, o solicita realizar cambios para que el agente busque unas nuevas."
+          desc: "El usuario revisa la lista de actividades recomendadas por persona y las aprueba, o solicita realizar cambios para que el agente busque alternativas."
         },
         accent: "#22d3ee"
       },
       6: {
-        title: "Armado de Itinerario",
-        agent: "Cronograma Agent",
-        desc: "Crea la distribución día a día de las actividades (mañana, tarde y noche) ordenándolas lógicamente por proximidad geográfica. En el backend se implementa un filtro de limpieza que remueve descripciones de los campos 'place' de cada bloque. En el frontend, se alimenta la dirección del hotel seleccionado al inicio de los puntos diarios, permitiendo a Google Maps trazar rutas reales partiendo desde el hotel.",
-        data: "state.cronograma = [\n  {\n    day: 1, date: 'Día 1',\n    morning: { start_time: '09:00', place: 'Monasterio de los Jerónimos', description: '...' },\n    afternoon: { start_time: '13:30', place: 'Pastéis de Belém', ... },\n    evening: { start_time: '20:00', place: 'Tasca do Chico', ... },\n    notes: 'Consejo: usar calzado cómodo para las cuestas.'\n  }\n]",
+        title: "Agenda Interactiva & Calendario Drag & Drop",
+        agent: "Cronograma Agent & Frontend Sync API",
+        desc: "Estructura el itinerario en 5 casillas diarias fijas (08:30 Mañana Temprano, 11:00 Media Mañana, 13:30 Almuerzo gastronómico, 15:30 Tarde y 19:30 Cena gastronómica). El frontend ofrece una matriz tipo Google Calendar con arrastre Drag & Drop y menú contextual ⇄. Cada cambio recalcula automáticamente la ruta en Google Maps iniciando y cerrando circuito en el hotel y sincroniza con `POST /api/update_cronograma`.",
+        data: "state.cronograma = [\n  {\n    day: 1, date: 'Día 1',\n    early_morning: { start_time: '08:30', place: 'Parque General San Martín, Mendoza', description: '...' },\n    late_morning: { start_time: '11:00', place: 'Plaza Independencia, Mendoza', ... },\n    lunch: { start_time: '13:30', place: 'Restaurante Azafrán, Mendoza', ... },\n    afternoon: { start_time: '15:30', place: 'Paseo de Artesanos, Mendoza', ... },\n    evening: { start_time: '19:30', place: 'Restaurante 1884 Francis Mallmann, Mendoza', ... }\n  }\n]",
         checkpoint: {
           title: "Aprobación de Itinerario (human_checkpoint_3)",
-          desc: "El usuario visualiza su agenda diaria interactiva con su mapa de rutas de Google Maps trazado para cada día. Aprueba o solicita rediseñar."
+          desc: "El usuario visualiza su agenda interactiva con opción de arrastrar actividades o cambiar horarios en 1-clic y su mapa de rutas de Google Maps trazado por cada día."
         },
         accent: "#22d3ee"
       },
       7: {
-        title: "Presupuesto Final y Resumen",
+        title: "Consolidación Final, PDF & Email",
         agent: "Summary & Presupuesto Agent",
-        desc: "Recibe el itinerario y las actividades definitivas. El Presupuesto Agent realiza la consolidación final sumando los vuelos del tier correspondiente, el costo exacto del hotel seleccionado multiplicado por las noches reales, y la suma neta de las actividades aprobadas. Luego, el Summary Agent compila el itinerario final de texto plano con la ficha del hotel, costos reales detallados y checklist de preparación. Guarda la sesión y habilita las descargas PDF.",
-        data: "state.budget.final = {\n  flights: 1560.0,\n  accommodation: 1300.0, // Hotel real seleccionado * noches\n  activities: 184.0,     // Costo real de actividades aprobadas\n  food: 1000.0,\n  total_per_person: 1011.0,\n  total_group: 4044.0,\n  is_estimated: false\n}\nstate.summary = '=== PLAN DE VACACIONES COMPLETO === ...'",
+        desc: "Realiza la consolidación matemática final sumando pasajes, el costo exacto del hotel seleccionado multiplicado por las noches reales y el costo total de las actividades aprobadas. Compila el resumen ejecutivo completo de texto plano, habilita la descarga en formato PDF y el envío por correo electrónico al usuario vía `/api/send-email`.",
+        data: "state.budget.final = {\n  flights: 1560.0,\n  accommodation: 1100.0, // Hotel seleccionado * noches reales\n  activities: 180.0,     // Suma de actividades aprobadas\n  food: 1000.0,\n  total_per_person: 960.0,\n  total_group: 3840.0,\n  is_estimated: false\n}\nstate.summary = '=== PLAN DE VACACIONES COMPLETO === ...'",
         checkpoint: null,
         accent: "#34d399"
       }
